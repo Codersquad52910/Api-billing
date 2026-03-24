@@ -36,54 +36,57 @@ const Services = () => {
         }
     };
 
+    const serviceIcons = ["🤖", "📊", "🔐", "🌐", "⚡", "🧠", "📡", "🔄"];
+
     return (
         <Layout>
-            <div className="mb-12">
-                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight font-display">API Services Catalog</h2>
-                <p className="text-slate-500 mt-2 font-medium">Explore and subscribe to powerful APIs for your next big project.</p>
+            <div className="mb-10">
+                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight font-display">API Services</h2>
+                <p className="text-slate-400 mt-1.5 font-medium text-sm">Explore and subscribe to APIs for your projects.</p>
             </div>
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center h-[40vh] space-y-4">
-                    <div className="w-12 h-12 border-4 border-brand-500/20 border-t-brand-600 rounded-full animate-spin"></div>
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest animate-pulse">Scanning Ecosystem...</p>
+                    <div className="w-12 h-12 border-[3px] border-brand-100 border-t-brand-500 rounded-full animate-spin"></div>
+                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest animate-pulse">Loading Services</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-                    {services.map((service) => {
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                    {services.map((service, index) => {
                         const isSubscribed = subscribedServices.includes(service._id);
                         return (
-                            <div key={service._id} className="bg-white p-8 rounded-2xl premium-shadow border border-slate-100 transition-all duration-300 group flex flex-col relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div key={service._id} className="bg-white p-7 rounded-2xl premium-shadow border border-slate-100/80 transition-all duration-300 group flex flex-col relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-bl from-brand-50/80 to-transparent rounded-full -mr-10 -mt-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-                                <div className="flex justify-between items-start mb-6 relative z-10">
-                                    <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-slate-100 group-hover:bg-brand-50 group-hover:border-brand-100 transition-all duration-300">
-                                        🔌
+                                <div className="flex justify-between items-start mb-5 relative z-10">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-brand-50 to-brand-100/50 rounded-xl flex items-center justify-center text-2xl border border-brand-100/40 group-hover:shadow-md group-hover:shadow-brand-100/40 transition-all duration-300">
+                                        {serviceIcons[index % serviceIcons.length]}
                                     </div>
                                     <div className="flex flex-col items-end">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Base Rate</span>
-                                        <span className="text-sm font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
-                                            ${service.baseRate.toFixed(3)}<span className="text-[10px] text-slate-400 font-bold ml-1">/req</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">per request</span>
+                                        <span className="text-sm font-extrabold text-slate-900 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100/80">
+                                            ${service.baseRate.toFixed(3)}
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="relative z-10 flex-1">
-                                    <h3 className="text-xl font-bold text-slate-900 mb-3 font-display group-hover:text-brand-600 transition-colors">{service.name}</h3>
-                                    <p className="text-slate-500 text-sm mb-8 line-clamp-3 leading-relaxed font-medium">{service.description}</p>
+                                    <h3 className="text-lg font-bold text-slate-900 mb-2 font-display group-hover:text-brand-600 transition-colors">{service.name}</h3>
+                                    <p className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed font-medium">{service.description}</p>
                                 </div>
 
                                 <div className="relative z-10 pt-4 border-t border-slate-50">
                                     {isSubscribed ? (
-                                        <div className="w-full py-3.5 bg-brand-50 text-brand-700 font-bold rounded-xl border border-brand-100/50 flex items-center justify-center gap-2.5 text-xs uppercase tracking-widest cursor-default">
-                                            <span className="w-2 h-2 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(79,90,239,0.5)]"></span> Active Service
+                                        <div className="w-full py-3 bg-brand-50/60 text-brand-600 font-bold rounded-xl border border-brand-100/40 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-default">
+                                            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none"><path d="M5 8L7 10L11 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                            Subscribed
                                         </div>
                                     ) : (
                                         <button
                                             onClick={() => handleSubscribe(service._id)}
-                                            className="w-full py-3.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 active:scale-[0.98] text-xs uppercase tracking-widest"
+                                            className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 active:scale-[0.98] text-xs uppercase tracking-wider"
                                         >
-                                            Connect Now
+                                            Subscribe
                                         </button>
                                     )}
                                 </div>
@@ -94,12 +97,10 @@ const Services = () => {
             )}
 
             {!loading && services.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 premium-shadow">
-                    <div className="w-20 h-20 bg-slate-50 rounded-2.5xl flex items-center justify-center text-4xl mb-6 shadow-inner border border-slate-100">
-                        🔍
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-900 font-display">No services found</h3>
-                    <p className="text-slate-400 mt-2 font-medium">We're expanding our API ecosystem. Check back soon!</p>
+                <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200/60 premium-shadow">
+                    <span className="text-4xl mb-4 opacity-10">🔍</span>
+                    <h3 className="text-lg font-bold text-slate-900 font-display">No services available</h3>
+                    <p className="text-slate-400 mt-1 font-medium text-sm">New APIs are being added. Check back soon!</p>
                 </div>
             )}
         </Layout>

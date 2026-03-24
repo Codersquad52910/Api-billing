@@ -19,22 +19,29 @@ router.post("/register", async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    await User.create({
+    const user = await User.create({
       name,
       email,
       password: hash,
-      otp,
-      otpExpires
+      isVerified: true
     });
 
-    console.log(`User created: ${email}, OTP: ${otp}`);
+    console.log(`User created and auto-verified: ${email}`);
 
-    await sendEmail(email, "Verify your email", `Your OTP is: ${otp}`);
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET
+    );
 
-    res.json({ message: "Registration successful. Please verify your email." });
+    res.json({ 
+      message: "Registration successful.", 
+      token, 
+      role: user.role,
+      name: user.name,
+      email: user.email,
+      isVerified: true
+    });
   } catch (error) {
     console.error("Registration Error:", error);
     res.status(500).json({ message: "Server error during registration" });
@@ -224,20 +231,12 @@ router.post("/login", async (req, res) => {
   console.log(`User found: ${user.email}, isVerified: ${user.isVerified}`);
 
   if (!user.isVerified) {
-    // Generate numeric OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otp = otp;
-    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    // Auto-verify the user
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
     await user.save();
-
-    console.log(`Login: Generated OTP for unverified user ${email}: ${otp}`);
-    await sendEmail(email, "Verify your email", `Your OTP is: ${otp}`);
-
-    return res.json({
-      message: "Please verify your email",
-      isVerified: false,
-      email: user.email
-    });
+    console.log(`Auto-verified previously unverified user: ${email}`);
   }
 
   const token = jwt.sign(
