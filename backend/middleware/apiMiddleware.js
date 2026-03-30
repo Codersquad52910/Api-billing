@@ -1,8 +1,49 @@
+/**
+ * API Usage Tracking Middleware
+ * 
+ * Intercepts incoming API requests, validates the provided API key,
+ * and records granular usage metrics including geographic location data.
+ * 
+ * Usage records are aggregated by API key, date, country, and region
+ * to enable detailed analytics and accurate billing calculations.
+ * 
+ * Flow:
+ * 1. Extract API key from x-api-key header
+ * 2. Validate key exists and is active
+ * 3. Resolve client IP to geographic location
+ * 4. Upsert usage record for the key+date+region combination
+ * 5. Pass control to the next middleware/handler
+ * 
+ * @module middleware/apiMiddleware
+ * @requires models/APIKey
+ * @requires models/Usage
+ * @requires geoip-lite
+ * @requires request-ip
+ */
+
 import APIKey from "../models/APIKey.js";
 import Usage from "../models/Usage.js";
 import geoip from "geoip-lite";
 import requestIp from "request-ip";
 
+/**
+ * Tracks API usage per request with geographic granularity.
+ * 
+ * Validates the API key from the `x-api-key` request header,
+ * resolves the client's geographic location via IP lookup,
+ * and increments the usage counter for the corresponding
+ * key+date+country+region combination.
+ * 
+ * @async
+ * @param {import('express').Request} req - Express request object
+ * @param {import('express').Response} res - Express response object
+ * @param {import('express').NextFunction} next - Express next function
+ * @returns {void}
+ * 
+ * @example
+ * // Apply to specific routes that require API key tracking
+ * router.get("/data", trackUsage, dataHandler);
+ */
 export const trackUsage = async (req, res, next) => {
     const key = req.headers["x-api-key"];
     if (!key) return res.status(401).json({ message: "API Key required" });
@@ -10,34 +51,20 @@ export const trackUsage = async (req, res, next) => {
     const apiKeyDoc = await APIKey.findOne({ key, isActive: true });
     if (!apiKeyDoc) return res.status(403).json({ message: "Invalid API Key" });
 
-    // Location Tracking
+    // ─── Geolocation Resolution ──────────────────────────────────────────
     const clientIp = requestIp.getClientIp(req);
     const geo = geoip.lookup(clientIp) || {};
     const country = geo.country || "Unknown";
     const region = geo.region || "Unknown";
 
-    // Increment usage
+    // ─── Daily Usage Aggregation ─────────────────────────────────────────
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let usage = await Usage.findOne({ apiKey: apiKeyDoc._id, date: today });
-    if (usage) {
-        usage.count++;
-        // If location was unknown and now known, maybe update? For now, we keep the first one or just distinct?
-        // Simpler: Just count. For detailed region analytics, we might need a separate collection or array of regions,
-        // but for this MVP, let's assume one main region per day or aggregated.
-        // BETTER APPROACH: Aggregate by Country/Region too?
-        // If we want detailed analytics per region, the current Usage model (one doc per day per key) isn't enough IF the key is used from different regions in the same day.
-        // However, expanding the model might be too much refactoring.
-        // Let's create a new Usage record if the region/country is different?
-        // OR: changing the findOne query to include country/region.
-    } else {
-        // This logic in the *ReplacementContent* is tricky because I can't think inside the tool call.
-        // I will implement the "Granular Usage" approach: group by Key + Date + Country + Region.
-    }
-
-    // RE-WRITING LOGIC FOR GRANULAR TRACKING
-    usage = await Usage.findOne({ apiKey: apiKeyDoc._id, date: today, country, region });
+    // Upsert usage record grouped by key + date + country + region
+    // This enables granular geographic analytics while maintaining
+    // efficient document-level aggregation
+    const usage = await Usage.findOne({ apiKey: apiKeyDoc._id, date: today, country, region });
 
     if (usage) {
         usage.count++;
