@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import StatCard from "../components/StatCard";
 import axios from "../api/axios";
 import { useAuth } from "../context/AuthContext";
@@ -15,7 +15,7 @@ const Dashboard = () => {
     const [newAdmin, setNewAdmin] = useState({ name: "", email: "", password: "" });
     const [adminMsg, setAdminMsg] = useState("");
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             if (role === "super_admin") {
                 const overviewRes = await axios.get("/admin/overview");
@@ -29,11 +29,11 @@ const Dashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [role]);
 
     useEffect(() => {
         fetchData();
-    }, [role]);
+    }, [fetchData]);
 
     const handleCreateAdmin = async (e) => {
         e.preventDefault();

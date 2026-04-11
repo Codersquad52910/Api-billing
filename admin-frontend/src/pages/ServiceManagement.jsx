@@ -6,17 +6,14 @@ const ServiceManagement = () => {
     const [services, setServices] = useState([]);
     const [formData, setFormData] = useState({ name: "", description: "", baseRate: 0.01 });
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [editingId, setEditingId] = useState(null);
 
     const fetchServices = async () => {
         try {
             const { data } = await axios.get("/services/all");
             setServices(data);
-            setError(null);
         } catch (error) {
             console.error("ServiceManagement: Failed to fetch services", error);
-            setError(error.response?.data?.message || "Protocol sync failure: Services unavailable.");
         } finally {
             setLoading(false);
         }

@@ -9,14 +9,13 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [role, setRole] = useState(() => localStorage.getItem("adminRole"));
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem("adminToken");
         const storedRole = localStorage.getItem("adminRole");
         console.log("AuthContext Init:", { token, storedRole });
-        setLoading(false);
     }, []);
 
     const login = (token, userRole) => {
