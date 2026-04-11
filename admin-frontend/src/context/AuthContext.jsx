@@ -3,9 +3,12 @@ import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAuth = () => useContext(AuthContext);
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [role, setRole] = useState(null);
+    const [role, setRole] = useState(() => localStorage.getItem("adminRole"));
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -13,9 +16,6 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem("adminToken");
         const storedRole = localStorage.getItem("adminRole");
         console.log("AuthContext Init:", { token, storedRole });
-        if (token && storedRole) {
-            setRole(storedRole);
-        }
         setLoading(false);
     }, []);
 
@@ -41,4 +41,3 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
-export const useAuth = () => useContext(AuthContext);
