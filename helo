@@ -1,0 +1,15 @@
+*   [33m8007e6a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #1 from Codersquad52910/pragy/ui-improvements-and-login-fix
+[31m|[m[32m\[m  
+[31m|[m * [33mb0cee81[m feat: UI improvements and remove OTP login requirement
+[31m|[m[31m/[m  
+* [33mf27a562[m CI workflow
+*   [33m383aef4[m Merge branch 'main' of https://github.com/Coder-Vedansh/Api-billing
+[33m|[m[34m\[m  
+[33m|[m * [33mebcddc9[m Add GitHub Actions workflow for auto start
+* [34m|[m [33m0469fcd[m improve the ui
+[34m|[m[34m/[m  
+* [33mfa7a9bc[m fix bugs
+* [33m6f0428c[m feat: Implement user authentication with registration, login, email verification, and a basic server setup.
+* [33m4ece8e8[m feat: Introduce authentication, email service, admin routes, and an analytics page, along with new backend and frontend dependencies.
+* [33m8f235e0[m added new features
+* [33m1942d01[m Initial commit
