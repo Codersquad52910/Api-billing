@@ -3,7 +3,6 @@ import axios from "../api/axios";
 import Layout from "./Layout";
 import StatCard from "./StatCard";
 import SalesChart from "./SalesChart";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Dashboard = () => {
@@ -18,7 +17,6 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [copiedKey, setCopiedKey] = useState(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         fetchDashboardData();
@@ -51,7 +49,7 @@ const Dashboard = () => {
         try {
             await axios.post("/keys/generate");
             fetchDashboardData();
-        } catch (error) {
+        } catch (_error) {
             alert("Failed to generate key");
         }
     };
@@ -61,7 +59,7 @@ const Dashboard = () => {
         try {
             await axios.delete(`/keys/${id}`);
             fetchDashboardData();
-        } catch (error) {
+        } catch (_error) {
             alert("Failed to delete key");
         }
     };

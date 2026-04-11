@@ -1,22 +1,20 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [role, setRole] = useState(localStorage.getItem("role"));
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAuth = () => useContext(AuthContext);
 
-  useEffect(() => {
+export const AuthProvider = ({ children }) => {
+  const [role, setRole] = useState(() => localStorage.getItem("role"));
+  const [user, setUser] = useState(() => {
     const token = localStorage.getItem("token");
     const storedRole = localStorage.getItem("role");
     if (token && storedRole) {
-      setRole(storedRole);
-      // We could fetch user profile here if needed
-      setUser({ name: localStorage.getItem("userName") || "User" });
+      return { name: localStorage.getItem("userName") || "User" };
     }
-    setLoading(false);
-  }, []);
+    return null;
+  });
 
   const login = (token, userRole, userData = {}) => {
     localStorage.setItem("token", token);
@@ -36,10 +34,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, login, logout, loading }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, role, login, logout }}>
+      {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
