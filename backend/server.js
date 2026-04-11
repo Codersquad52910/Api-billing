@@ -22,6 +22,9 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { existsSync } from "fs";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
@@ -30,6 +33,10 @@ import usageRoutes from "./routes/usageRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
 import { startCronJobs } from "./services/cronService.js";
+
+// ─── Path Resolution ────────────────────────────────────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // ─── Environment & Database Initialization ───────────────────────────────────
 dotenv.config();
@@ -40,8 +47,9 @@ const app = express();
 
 // ─── CORS Configuration ──────────────────────────────────────────────────────
 // Allow requests from both frontend dev servers (user & admin panels)
+// and from same-origin in production (Docker)
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://127.0.0.1:5176"],
+  origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://127.0.0.1:5176", "http://localhost:5000", "http://127.0.0.1:5000"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -59,9 +67,43 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/services", serviceRoutes);
 
 // ─── Health Check Endpoint ──────────────────────────────────────────────────
-app.get("/", (req, res) => {
-  res.send("API Billing Backend is running");
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "API Billing Backend is running", timestamp: new Date().toISOString() });
 });
+
+// ─── Static File Serving (Production / Docker) ──────────────────────────────
+// In Docker, the built React frontends are available as static files.
+// User Frontend:  http://localhost:5000/
+// Admin Frontend: http://localhost:5000/admin/
+const frontendDist = join(__dirname, "..", "frontend", "dist");
+const adminDist = join(__dirname, "..", "admin-frontend", "dist");
+
+if (existsSync(frontendDist)) {
+  console.log("📦 Serving User Frontend from:", frontendDist);
+  // Serve admin frontend at /admin (must come BEFORE the main frontend catch-all)
+  if (existsSync(adminDist)) {
+    console.log("📦 Serving Admin Frontend from:", adminDist);
+    app.use("/admin", express.static(adminDist));
+    // SPA fallback — only serve index.html for routes that don't match actual files
+    app.get("/admin/*", (req, res, next) => {
+      // If the request looks like a file (has extension), let it 404 naturally
+      if (req.path.match(/\.\w+$/)) {
+        return next();
+      }
+      res.sendFile(join(adminDist, "index.html"));
+    });
+  }
+  // Serve user frontend at root
+  app.use(express.static(frontendDist));
+  app.get("*", (req, res) => {
+    res.sendFile(join(frontendDist, "index.html"));
+  });
+} else {
+  // Local development — just show a health message
+  app.get("/", (req, res) => {
+    res.send("API Billing Backend is running. Frontends are served by Vite dev servers.");
+  });
+}
 
 // ─── Background Services ────────────────────────────────────────────────────
 startCronJobs();

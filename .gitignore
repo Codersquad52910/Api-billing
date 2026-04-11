@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Environment variables (NEVER commit secrets)
+.env
+.env.local
+.env.production
+
+# Build output
+frontend/dist/
+admin-frontend/dist/
+
+# Logs
+*.log
+crash.log
+crash_debug.log
+crash_debug_2.log
+backend/backend_debug.log
+backend/backend_error.log
+backend/crash.log
+backend/crash_debug.log
+backend/crash_debug_2.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+docker-compose.override.yml
