@@ -1,0 +1,57 @@
+# ============================================================
+# API Billing Platform — Docker Compose Configuration
+# ============================================================
+# Runs the full stack: Backend + MongoDB
+# Usage: docker compose up --build
+# ============================================================
+
+version: "3.8"
+
+services:
+  # ── MongoDB Database ────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: apibilling-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - apibilling-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── API Billing Application ─────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apibilling-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/api_dashboard
+      - JWT_SECRET=${JWT_SECRET:-default_jwt_secret_change_me}
+      - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@example.com}
+      - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-admin123}
+      - SMTP_EMAIL=${SMTP_EMAIL:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - apibilling-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  apibilling-network:
+    driver: bridge

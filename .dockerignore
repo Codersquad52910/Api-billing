@@ -1,0 +1,48 @@
+# Dependencies (will be installed during build)
+node_modules/
+**/node_modules/
+
+# Environment files (secrets must NOT be baked into images)
+.env
+backend/.env
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build output (rebuilt in container)
+frontend/dist/
+admin-frontend/dist/
+
+# Logs
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+docs/
+*.md
+CONTRIBUTING.md
+
+# Zip archive
+*.zip
+
+# Debug/test scripts
+backend/debug_*.js
+backend/crash*.log
+backend/backend_*.log
+backend/reproduce_crash.js
+backend/check_super_admin.js
+backend/get_otp.js
+backend/inspect_rogue_keys.js
+backend/test_*.js
+test_*.js
+test_*.mjs
+
+# Backup
+frontend_backup/
