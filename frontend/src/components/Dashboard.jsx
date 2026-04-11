@@ -49,7 +49,7 @@ const Dashboard = () => {
         try {
             await axios.post("/keys/generate");
             fetchDashboardData();
-        } catch (_error) {
+        } catch {
             alert("Failed to generate key");
         }
     };
@@ -59,7 +59,7 @@ const Dashboard = () => {
         try {
             await axios.delete(`/keys/${id}`);
             fetchDashboardData();
-        } catch (_error) {
+        } catch {
             alert("Failed to delete key");
         }
     };
