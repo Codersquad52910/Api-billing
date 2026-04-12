@@ -18,15 +18,22 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const [copiedKey, setCopiedKey] = useState(null);
 
+    const [isAddingKey, setIsAddingKey] = useState(false);
+    const [newKeyValue, setNewKeyValue] = useState("");
+
+    const [timeRange, setTimeRange] = useState("Monthly");
+    const [selectedKey, setSelectedKey] = useState("all");
+    const [testCount, setTestCount] = useState({}); // Stores count per key ID
+
     useEffect(() => {
         fetchDashboardData();
-    }, []);
+    }, [timeRange, selectedKey]);
 
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
             const [statsRes, keysRes] = await Promise.all([
-                axios.get("/usage/stats"),
+                axios.get(`/usage/stats?period=${timeRange}&apiKeyId=${selectedKey}`),
                 axios.get("/keys")
             ]);
             setStats(statsRes.data || {
@@ -45,12 +52,18 @@ const Dashboard = () => {
         }
     };
 
-    const handleGenerate = async () => {
+    const handleSaveKey = async () => {
+        if (!newKeyValue.trim()) {
+            alert("Please enter a valid API key");
+            return;
+        }
         try {
-            await axios.post("/keys/generate");
+            await axios.post("/keys/add", { key: newKeyValue.trim() });
+            setNewKeyValue("");
+            setIsAddingKey(false);
             fetchDashboardData();
-        } catch {
-            alert("Failed to generate key");
+        } catch (error) {
+            alert(error.response?.data?.message || "Failed to add API key. It might already exist.");
         }
     };
 
@@ -68,6 +81,27 @@ const Dashboard = () => {
         navigator.clipboard.writeText(key);
         setCopiedKey(key);
         setTimeout(() => setCopiedKey(null), 2000);
+    };
+
+    const handleTestKey = async (apiKey, keyId) => {
+        const count = parseInt(testCount[keyId]) || 1;
+        try {
+            // Send requests in a batch based on chosen count
+            const requests = Array(count).fill().map(() => 
+                axios.get(`/gateway/call?key=${apiKey}`)
+            );
+            
+            await Promise.all(requests);
+            
+            // Re-fetch data to see the update
+            fetchDashboardData();
+            
+            alert(`Success! Simulated ${count} API request${count > 1 ? 's' : ''}. Your analytics have been updated!`);
+        } catch (err) {
+            console.error("Test failed:", err);
+            const errorMsg = err.response?.data?.error || "Connection error. Check if the server is running.";
+            alert(`Failed to test API: ${errorMsg}`);
+        }
     };
 
     // Greeting based on time
@@ -120,23 +154,56 @@ const Dashboard = () => {
                     <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight font-display">Performance Overview</h2>
                     <p className="text-slate-400 mt-1.5 font-medium text-sm">Monitor your API usage and billing at a glance.</p>
                 </div>
-                <div className="flex gap-3">
-                    <button onClick={handleGenerate} className="bg-brand-600 text-white px-6 py-3 rounded-xl hover:bg-brand-700 transition-all font-bold shadow-lg shadow-brand-500/15 flex items-center gap-2 active:scale-95 text-xs uppercase tracking-wider">
-                        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-                        New API Key
-                    </button>
+                <div className="flex gap-3 items-center">
+                    {isAddingKey ? (
+                        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm relative z-10 transition-all duration-300">
+                            <input 
+                                type="text" 
+                                placeholder="sk-your-api-key-here..." 
+                                value={newKeyValue}
+                                onChange={(e) => setNewKeyValue(e.target.value)}
+                                className="px-3 py-2 text-sm text-slate-700 rounded-lg outline-none w-64 bg-transparent font-medium"
+                                autoFocus
+                            />
+                            <button 
+                                onClick={handleSaveKey} 
+                                className="bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 font-bold transition-all text-xs"
+                            >
+                                Save
+                            </button>
+                            <button 
+                                onClick={() => { setIsAddingKey(false); setNewKeyValue(""); }} 
+                                className="text-slate-400 hover:text-slate-600 px-2 py-2 transition-colors font-bold text-xs"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    ) : (
+                        <button onClick={() => setIsAddingKey(true)} className="bg-brand-600 text-white px-6 py-3 rounded-xl hover:bg-brand-700 transition-all font-bold shadow-lg shadow-brand-500/15 flex items-center gap-2 active:scale-95 text-xs uppercase tracking-wider">
+                            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                            Add API Key
+                        </button>
+                    )}
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <StatCard title="Current Bill" value={`$${stats.currentBill}`} icon="💰" trend={12.4} />
-                <StatCard title="Total Usage" value={stats.totalUsage.toLocaleString()} icon="⚡" trend={5.2} />
+                <StatCard title="Current Bill" value={`$${stats.currentBill}`} icon="💰" />
+                <StatCard title="Total Usage" value={stats.totalUsage.toLocaleString()} icon="⚡" />
                 <StatCard title="Active Keys" value={stats.activeKeys} icon="🔑" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
-                    <SalesChart data={stats.chartData} title="Usage Analytics" color="#4f46e5" />
+                    <SalesChart 
+                        data={stats.chartData} 
+                        title="Usage Analytics" 
+                        activeRange={timeRange} 
+                        onTimeRangeChange={setTimeRange}
+                        keysList={keys}
+                        selectedKey={selectedKey}
+                        onKeyChange={setSelectedKey}
+                    />
                 </div>
 
                 <div className="bg-white p-7 rounded-2xl border border-slate-100/80 premium-shadow flex flex-col" style={{ maxHeight: '520px' }}>
@@ -161,11 +228,32 @@ const Dashboard = () => {
                                     >
                                         {copiedKey === key.key ? '✓ Copied!' : `${key.key.substring(0, 16)}...`}
                                     </button>
-                                    <button onClick={() => handleDelete(key._id)} className="text-slate-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-50 opacity-0 group-hover:opacity-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 000-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <input 
+                                            type="number" 
+                                            min="1" 
+                                            max="100"
+                                            value={testCount[key._id] || 1}
+                                            onChange={(e) => setTestCount({...testCount, [key._id]: e.target.value})}
+                                            className="w-10 h-7 text-[10px] font-bold text-center bg-white border border-slate-200 rounded-lg outline-none focus:border-brand-300"
+                                            onClick={(e) => e.stopPropagation()}
+                                            title="Number of requests"
+                                        />
+                                        <button 
+                                            onClick={() => handleTestKey(key.key, key._id)}
+                                            className="text-emerald-500 hover:text-emerald-600 transition-all p-1.5 rounded-lg hover:bg-emerald-50"
+                                            title={`Simulate ${testCount[key._id] || 1} requests`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                        <button onClick={() => handleDelete(key._id)} className="text-slate-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 000-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1-1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full text-[9px] font-bold tracking-wider flex items-center gap-1.5 border border-emerald-100/50 uppercase">

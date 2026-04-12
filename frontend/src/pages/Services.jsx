@@ -26,13 +26,35 @@ const Services = () => {
         fetchData();
     }, []);
 
-    const handleSubscribe = async (serviceId) => {
+    const handleSubscribe = async (service) => {
         try {
-            const { data } = await axios.post(`/services/${serviceId}/subscribe`);
-            alert(data.message);
+            const { data } = await axios.post(`/services/${service._id}/subscribe`);
+            try {
+                await navigator.clipboard.writeText(data.generatedKey);
+                window.prompt(
+                    `${data.message}\n\nIMPORTANT: We have automatically copied your new key to your clipboard!\nIf that failed, you can manually copy it from the text box below:\n\nPlease paste this key into your Dashboard to activate analytics!`,
+                    data.generatedKey
+                );
+            } catch (err) {
+                window.prompt(
+                    `${data.message}\n\nIMPORTANT: Please copy your exclusive Service API Key from the text box below and add it to your Dashboard to activate analytics!`,
+                    data.generatedKey
+                );
+            }
             setSubscribedServices(data.subscribedServices);
         } catch (error) {
             alert(error.response?.data?.message || "Subscription failed");
+        }
+    };
+
+    const handleUnsubscribe = async (serviceId) => {
+        if (!window.confirm("Are you sure you want to unsubscribe? All connected API Keys will be instantly revoked.")) return;
+        try {
+            const { data } = await axios.post(`/services/${serviceId}/unsubscribe`);
+            alert(data.message);
+            setSubscribedServices(data.subscribedServices);
+        } catch (error) {
+            alert(error.response?.data?.message || "Unsubscription failed");
         }
     };
 
@@ -77,13 +99,24 @@ const Services = () => {
 
                                 <div className="relative z-10 pt-4 border-t border-slate-50">
                                     {isSubscribed ? (
-                                        <div className="w-full py-3 bg-brand-50/60 text-brand-600 font-bold rounded-xl border border-brand-100/40 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-default">
-                                            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none"><path d="M5 8L7 10L11 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                            Subscribed
+                                        <div className="flex gap-2">
+                                            <div className="flex-1 py-3 bg-brand-50/60 text-brand-600 font-bold rounded-xl border border-brand-100/40 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-default">
+                                                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none"><path d="M5 8L7 10L11 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                Subscribed
+                                            </div>
+                                            <button 
+                                                onClick={() => handleUnsubscribe(service._id)}
+                                                className="px-4 bg-rose-50/50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl border border-rose-100/50 transition-colors shadow-sm"
+                                                title="Unsubscribe & Revoke Keys"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     ) : (
                                         <button
-                                            onClick={() => handleSubscribe(service._id)}
+                                            onClick={() => handleSubscribe(service)}
                                             className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 active:scale-[0.98] text-xs uppercase tracking-wider"
                                         >
                                             Subscribe

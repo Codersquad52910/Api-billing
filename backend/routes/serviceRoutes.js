@@ -1,6 +1,8 @@
 import express from "express";
+import crypto from "crypto";
 import Service from "../models/Service.js";
 import User from "../models/User.js";
+import APIKey from "../models/APIKey.js";
 import { protect, adminOnly, superAdminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -65,7 +67,6 @@ router.post("/:id/subscribe", protect(), async (req, res) => {
 
         const user = await User.findById(req.user.id);
 
-        // Check if already subscribed
         if (user.subscribedServices.includes(service._id)) {
             return res.status(400).json({ message: "Already subscribed to this service" });
         }
@@ -73,9 +74,41 @@ router.post("/:id/subscribe", protect(), async (req, res) => {
         user.subscribedServices.push(service._id);
         await user.save();
 
-        res.json({ message: `Subscribed to ${service.name} successfully`, subscribedServices: user.subscribedServices });
+        // Generate exclusive service key string
+        const prefix = `sk_${service.name.substring(0,3).toLowerCase().replace(/[^a-z0-9]/g, '')}_`;
+        const generatedKey = `${prefix}${crypto.randomBytes(16).toString("hex")}`;
+
+        res.json({ 
+            message: `Subscribed successfully!`, 
+            subscribedServices: user.subscribedServices,
+            generatedKey 
+        });
     } catch (error) {
         console.error("Subscription Error:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
+// Unsubscribe from a Service
+router.post("/:id/unsubscribe", protect(), async (req, res) => {
+    try {
+        const service = await Service.findById(req.params.id);
+        if (!service) {
+            return res.status(404).json({ message: "Service not found" });
+        }
+
+        const user = await User.findById(req.user.id);
+
+        user.subscribedServices = user.subscribedServices.filter(subId => subId.toString() !== service._id.toString());
+        await user.save();
+
+        // Destroy any active API Keys explicitly matching this service's generation logic
+        const prefix = `sk_${service.name.substring(0,3).toLowerCase().replace(/[^a-z0-9]/g, '')}_`;
+        await APIKey.deleteMany({ user: user._id, key: { $regex: `^${prefix}` } });
+
+        res.json({ message: `Unsubscribed from ${service.name}. Connected credentials blocked.`, subscribedServices: user.subscribedServices });
+    } catch (error) {
+        console.error("Unsubscribe Error:", error);
         res.status(500).json({ message: "Server Error" });
     }
 });

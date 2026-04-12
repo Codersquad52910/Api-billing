@@ -62,24 +62,24 @@ const Settings = () => {
                 </div>
 
                 <div className="lg:col-span-1 space-y-6 order-1 lg:order-2">
-                    <div className="bg-gradient-to-br from-slate-950 to-slate-900 rounded-3xl p-8 text-white relative overflow-hidden premium-shadow">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/15 rounded-full blur-3xl"></div>
+                    <div className="bg-white rounded-3xl p-8 border border-slate-100/80 premium-shadow relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-3xl"></div>
                         <div className="absolute bottom-0 left-0 w-20 h-20 bg-violet-500/10 rounded-full blur-2xl"></div>
-                        <h4 className="font-bold text-base mb-6 font-display flex items-center gap-3 relative z-10">
-                            <span className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-sm border border-white/5">🔔</span>
+                        <h4 className="font-bold text-base text-slate-900 mb-6 font-display flex items-center gap-3 relative z-10">
+                            <span className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center text-sm border border-brand-100/50">🔔</span>
                             Notifications
                         </h4>
                         <div className="space-y-3 relative z-10">
-                            <div className="flex items-center justify-between p-4 bg-white/[0.04] rounded-xl border border-white/[0.06] hover:border-white/10 transition-colors">
+                            <div className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100 hover:border-brand-200 transition-colors">
                                 <div className="space-y-0.5">
-                                    <span className="text-sm font-semibold block">Email Alerts</span>
+                                    <span className="text-sm font-semibold text-slate-800 block">Email Alerts</span>
                                     <span className="text-[9px] text-slate-500 flex items-center gap-1.5 uppercase font-bold tracking-wider">
-                                        <span className="w-1.5 h-1.5 bg-brand-500 rounded-full"></span> Active
+                                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span> Active
                                     </span>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" className="sr-only peer" defaultChecked />
-                                    <div className="w-10 h-5.5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-brand-600"></div>
+                                    <div className="w-10 h-5 border border-slate-200 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500 peer-checked:border-brand-500 shadow-sm"></div>
                                 </label>
                             </div>
                         </div>

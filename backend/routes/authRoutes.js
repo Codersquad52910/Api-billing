@@ -20,27 +20,23 @@ router.post("/register", async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const user = await User.create({
       name,
       email,
       password: hash,
-      isVerified: true
+      isVerified: false,
+      otp,
+      otpExpires: Date.now() + 10 * 60 * 1000
     });
 
-    console.log(`User created and auto-verified: ${email}`);
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET
-    );
+    console.log(`Registration for ${email}. OTP: ${otp}`);
+    sendEmail(email, "Verify your email", `Your registration OTP is: ${otp}`).catch(e => console.error("Bg Mail Error:", e.message));
 
     res.json({ 
-      message: "Registration successful.", 
-      token, 
-      role: user.role,
-      name: user.name,
+      message: "Registration successful. Please verify your email.", 
       email: user.email,
-      isVerified: true
+      requiresOTP: true
     });
   } catch (error) {
     console.error("Registration Error:", error);
@@ -76,14 +72,11 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ message: "User not found." });
     }
 
-    if (user.isVerified) {
-      return res.status(400).json({ message: "Email already verified." });
-    }
-
     if (user.otp !== otp || user.otpExpires < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP." });
     }
 
+    // Mark as verified if they are entering a code correctly
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpires = undefined;
@@ -122,15 +115,13 @@ router.post("/resend-otp", async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) return res.status(400).json({ message: "User not found" });
-    if (user.isVerified) return res.status(400).json({ message: "User already verified" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
     console.log(`Resend OTP for ${email}: ${otp}`);
-
-    await sendEmail(email, "Verify your email", `Your new OTP is: ${otp}`);
+    sendEmail(email, "Verify your email", `Your new OTP is: ${otp}`).catch(e => console.error("Bg Mail Error:", e.message));
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
     console.error("Resend OTP Error:", error);
@@ -156,9 +147,7 @@ router.post("/forgot-password", async (req, res) => {
     await user.save();
 
     console.log(`Forgot Password OTP for ${email}: ${otp}`);
-
-    await sendEmail(email, "Reset your password", `Your OTP for password reset is: ${otp}`);
-
+    sendEmail(email, "Reset your password", `Your OTP for password reset is: ${otp}`).catch(e => console.error("Bg Mail Error:", e.message));
     res.json({ message: "OTP sent to your email." });
   } catch (error) {
     console.error("Forgot Password Error:", error);
@@ -230,24 +219,17 @@ router.post("/login", async (req, res) => {
 
   console.log(`User found: ${user.email}, isVerified: ${user.isVerified}`);
 
-  if (!user.isVerified) {
-    // Auto-verify the user
-    user.isVerified = true;
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    await user.save();
-    console.log(`Auto-verified previously unverified user: ${email}`);
-  }
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  user.otp = otp;
+  user.otpExpires = Date.now() + 10 * 60 * 1000;
+  await user.save();
 
-  const token = jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET
-  );
+  console.log(`Login verification for ${email}. OTP: ${otp}`);
+  sendEmail(email, "Login Verification Code", `Your security code is: ${otp}`).catch(e => console.error("Bg Mail Error:", e.message));
+
   res.json({ 
-    token, 
-    role: user.role, 
-    isVerified: true,
-    name: user.name,
+    message: "OTP sent to your email.", 
+    requiresOTP: true,
     email: user.email
   });
 });
@@ -280,6 +262,46 @@ router.get("/me", async (req, res) => {
   } catch (error) {
     console.error("Profile Fetch Error:", error);
     res.status(401).json({ message: "Invalid Token" });
+  }
+});
+
+// Update User Profile
+router.put("/profile", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "No token provided" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role === 'super_admin') {
+        return res.status(400).json({ message: "System Super Admin profile cannot be edited here." });
+    }
+
+    const { name, email } = req.body;
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    if (email && email.toLowerCase() !== user.email.toLowerCase()) {
+        const emailExists = await User.findOne({ email: email.toLowerCase() });
+        if (emailExists) {
+            return res.status(400).json({ message: "Email already in use" });
+        }
+    }
+
+    user.name = name || user.name;
+    user.email = email || user.email;
+
+    await user.save();
+
+    res.json({ 
+        message: "Profile updated successfully", 
+        user: { name: user.name, email: user.email }
+    });
+  } catch (error) {
+    console.error("Profile Update Error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
