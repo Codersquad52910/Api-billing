@@ -66,8 +66,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build Docker Image
-        run: docker build -t api-billing .
+      - name: 🐳 Build Docker Image
+        run: |
+          docker build -t 52910/api-billing:latest .
+          echo "Docker image built successfully! 🐳"
 
-      - name: Simulated Deployment
-        run: echo "Application Deployed Successfully 🚀"
+      - name: 🚀 Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./
+        continue-on-error: true # So CI still passes even if secrets are missing initially
