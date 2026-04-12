@@ -36,6 +36,13 @@ import { generateAndSendReports } from "./reportGenerator.js";
  * @returns {void}
  */
 export const startCronJobs = () => {
+    // In Vercel serverless, cron is handled by Vercel Cron Jobs (vercel.json)
+    // node-cron requires a persistent process and won't work in serverless
+    if (process.env.VERCEL) {
+        console.log("Serverless mode: Cron jobs handled by Vercel Cron Jobs");
+        return;
+    }
+
     // Run at 00:00 on the 1st day of every month
     cron.schedule("0 0 1 * *", () => {
         console.log("Running Monthly Report Job...");

@@ -1,0 +1,13 @@
+Vercel CLI 50.13.2
+Retrieving projectΓÇª
+Fetching deployments in coder-vedanshs-projects
+> Production deployments for coder-vedanshs-projects/admin-frontend [503ms]
+
+  Age     Deployment                                                              Status      Environment     Duration     Username          
+  2m      https://admin-frontend-l5kswsth2-coder-vedanshs-projects.vercel.app     ΓùÅ Ready     Production      10s          coder-vedansh     
+  2m      https://admin-frontend-kaefvc9mc-coder-vedanshs-projects.vercel.app     ΓùÅ Ready     Production      9s           coder-vedansh     
+  52m     https://admin-frontend-41dbadby5-coder-vedanshs-projects.vercel.app     ΓùÅ Ready     Production      14s          coder-vedansh     
+
+https://admin-frontend-l5kswsth2-coder-vedanshs-projects.vercel.app
+https://admin-frontend-kaefvc9mc-coder-vedanshs-projects.vercel.app
+https://admin-frontend-41dbadby5-coder-vedanshs-projects.vercel.app

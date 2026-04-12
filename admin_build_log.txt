@@ -1,0 +1,36 @@
+Vercel CLI 50.13.2
+Retrieving projectΓÇª
+Deploying coder-vedanshs-projects/admin-frontend
+Inspect: https://vercel.com/coder-vedanshs-projects/admin-frontend/9fQCJ1UUqCuS7D3CcXUMjKDTyL9U [2s]
+Production: https://admin-frontend-l5kswsth2-coder-vedanshs-projects.vercel.app [2s]
+Building...
+Building...
+Building: Running build in Washington, D.C., USA (East) ΓÇô iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 26 deployment files...
+Building: Restored build cache from previous deployment (BkaKmcPV66soaGXUT1KfxzEB4v7g)
+Building: Running "vercel build"
+Building: Vercel CLI 50.42.0
+Building: Installing dependencies...
+Building: up to date in 702ms
+Building: 49 packages are looking for funding
+Building: run `npm fund` for details
+Building: Running "npm run build"
+Building: > admin-frontend@0.0.0 build
+Building: > vite build
+Building: vite v7.3.1 building client environment for production...
+Building: transforming...
+Building: Γ£ô 1793 modules transformed.
+Building: rendering chunks...
+Building: computing gzip size...
+Building: dist/index.html                   0.46 kB Γöé gzip:  0.30 kB
+Building: dist/assets/index-UOrDWayc.css   61.73 kB Γöé gzip: 10.17 kB
+Building: dist/assets/index-zFbKS4FI.js   304.13 kB Γöé gzip: 96.85 kB
+Building: Γ£ô built in 3.31s
+Building: Build Completed in /vercel/output [5s]
+Building: Deploying outputs...
+[2K[1A[2K[GProduction: https://admin-frontend-l5kswsth2-coder-vedanshs-projects.vercel.app [14s]
+Completing...
+Aliased: https://admin-frontend-indol-one.vercel.app [14s]
+https://admin-frontend-l5kswsth2-coder-vedanshs-projects.vercel.app

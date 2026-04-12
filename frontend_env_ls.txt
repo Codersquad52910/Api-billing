@@ -1,0 +1,7 @@
+Vercel CLI 50.13.2
+Retrieving projectΓÇª
+> Environment Variables found for coder-vedanshs-projects/frontend [344ms]
+
+ name               value               environments        created    
+ VITE_ADMIN_URL     Encrypted           Production          5m ago     
+

@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/cron/monthly-report.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/cron/monthly-report",
+      "dest": "/api/cron/monthly-report.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/monthly-report",
+      "schedule": "0 0 1 * *"
+    }
+  ]
+}

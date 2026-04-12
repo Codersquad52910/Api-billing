@@ -83,7 +83,7 @@ const Layout = ({ children }) => {
                         <div className="pt-6 px-0">
                             <div className="px-4 mb-3 text-[9px] font-bold uppercase tracking-[0.25em] text-slate-600">Admin Zone</div>
                             <a
-                                href="http://localhost:5174"
+                                href={import.meta.env.VITE_ADMIN_URL || "http://localhost:5174"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition-all duration-300 hover:bg-white/[0.04] hover:text-slate-200 group"

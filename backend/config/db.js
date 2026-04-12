@@ -27,9 +27,17 @@ import mongoose from "mongoose";
  * import connectDB from "./config/db.js";
  * await connectDB();
  */
+let cached = null;
+
 const connectDB = async () => {
-  await mongoose.connect(process.env.MONGO_URI);
+  // In serverless environments, reuse the existing connection
+  if (cached && mongoose.connection.readyState === 1) {
+    return cached;
+  }
+
+  cached = await mongoose.connect(process.env.MONGO_URI);
   console.log("MongoDB Connected");
+  return cached;
 };
 
 export default connectDB;
