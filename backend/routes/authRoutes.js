@@ -48,7 +48,8 @@ router.post("/register", async (req, res) => {
 // Verify OTP
 router.post("/verify-otp", async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    let { email, otp } = req.body;
+    otp = (otp || "").toString().replace(/\s/g, ""); // Strip all spaces and hidden characters
 
     // Super Admin Bypass
     if (email.toLowerCase() === process.env.SUPER_ADMIN_EMAIL.toLowerCase()) {
