@@ -32,6 +32,8 @@ import apiRoutes from "./routes/apiRoutes.js";
 import usageRoutes from "./routes/usageRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import gatewayRoutes from "./routes/gatewayRoutes.js";
 import { startCronJobs } from "./services/cronService.js";
 
 // ─── Path Resolution ────────────────────────────────────────────────────────
@@ -65,6 +67,8 @@ app.use("/api/keys", apiRoutes);
 app.use("/api/usage", usageRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/gateway", gatewayRoutes);
 
 // ─── Health Check Endpoint ──────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {

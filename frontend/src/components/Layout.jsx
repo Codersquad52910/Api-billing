@@ -1,17 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import axios from "../api/axios";
 
 const Layout = ({ children }) => {
     const { user, logout, role } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+        }
+    }, [user]);
+
+    const fetchNotifications = async () => {
+        try {
+            const res = await axios.get("/notifications");
+            setNotifications(res.data);
+        } catch (error) {
+            console.error("Failed to fetch notifications");
+        }
+    };
+
+    const markAsRead = async (id) => {
+        try {
+            await axios.put(`/notifications/${id}/read`);
+            setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const markAllRead = async () => {
+        try {
+            await axios.put("/notifications/read-all");
+            setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const handleLogout = () => {
         logout();
         navigate("/");
     };
+
+    const unreadCount = notifications.filter(n => !n.isRead).length;
 
     const navItems = [
         { name: "Overview", path: "/dashboard", icon: "📊" },
@@ -141,12 +179,56 @@ const Layout = ({ children }) => {
                             System Online
                         </div>
                         <div className="h-7 w-[1px] bg-slate-100 hidden sm:block"></div>
-                        <button className="p-2.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50/50 rounded-xl transition-all relative group">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-                        </button>
+                        <div className="relative">
+                            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50/50 rounded-xl transition-all relative group">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white pulse-dot"></span>
+                                )}
+                            </button>
+
+                            {/* Notifications Dropdown */}
+                            {showNotifications && (
+                                <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl shadow-slate-900/10 border border-slate-100/80 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4">
+                                    <div className="p-4 border-b border-slate-50 flex items-center justify-between">
+                                        <h3 className="font-bold text-slate-900 font-display">Notifications</h3>
+                                        {unreadCount > 0 && (
+                                            <button onClick={markAllRead} className="text-[10px] font-bold text-brand-600 hover:text-brand-700 uppercase tracking-wider">
+                                                Mark all read
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-80 overflow-y-auto scrollbar-thin">
+                                        {notifications.length === 0 ? (
+                                            <div className="p-6 text-center text-slate-400 text-sm font-medium">
+                                                No new notifications
+                                            </div>
+                                        ) : (
+                                            notifications.map(notif => (
+                                                <div 
+                                                    key={notif._id} 
+                                                    onClick={() => !notif.isRead && markAsRead(notif._id)}
+                                                    className={`p-4 border-b border-slate-50/50 hover:bg-slate-50 cursor-pointer transition-colors flex gap-3 ${notif.isRead ? 'opacity-60' : 'bg-brand-50/30'}`}
+                                                >
+                                                    <div className={`mt-0.5 text-lg ${notif.type === 'success' ? 'text-emerald-500' : notif.type === 'warning' ? 'text-amber-500' : 'text-brand-500'}`}>
+                                                        {notif.type === 'success' ? '✓' : notif.type === 'warning' ? '⚠️' : 'ℹ️'}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-slate-900">{notif.title}</h4>
+                                                        <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{notif.message}</p>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2 block">
+                                                            {new Date(notif.createdAt).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </header>
 

@@ -9,7 +9,7 @@ import Profile from "./pages/Profile";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import { loginUser, registerUser } from "./api/auth";
+import { loginUser, registerUser, verifyOTP, resendOTP } from "./api/auth";
 
 const AuthLayout = ({ children, title, subtitle }) => (
   <div className="min-h-screen flex items-center justify-center bg-[#f8f9fc] relative overflow-hidden font-sans">
@@ -45,6 +45,8 @@ const AuthLayout = ({ children, title, subtitle }) => (
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOTP, setShowOTP] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -56,8 +58,12 @@ const Login = () => {
     setLoading(true);
     try {
       const { data } = await loginUser(email, password);
-      login(data.token, data.role, data);
-      navigate("/dashboard");
+      if (data.requiresOTP) {
+        setShowOTP(true);
+      } else {
+        login(data.token, data.role, data);
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Access denied. Check your credentials.");
     } finally {
@@ -65,8 +71,32 @@ const Login = () => {
     }
   };
 
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const { data } = await verifyOTP(email, otp);
+      login(data.token, data.role, data);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid or expired OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      await resendOTP(email);
+      alert("New OTP sent to your email!");
+    } catch (err) {
+      setError("Failed to resend OTP.");
+    }
+  };
+
   return (
-    <AuthLayout title="Welcome Back" subtitle="Sign in to your API dashboard">
+    <AuthLayout title={showOTP ? "Verify Identity" : "Welcome Back"} subtitle={showOTP ? `We've sent a code to ${email}` : "Sign in to your API dashboard"}>
       {error && (
         <div className="mb-6 p-3.5 bg-rose-50 text-rose-600 text-xs font-semibold rounded-xl flex items-center gap-2.5 border border-rose-100/80 animate-shake">
           <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm-.75 4a.75.75 0 011.5 0v3a.75.75 0 01-1.5 0V5zm.75 6.5a.75.75 0 110-1.5.75.75 0 010 1.5z" /></svg>
@@ -74,39 +104,70 @@ const Login = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
-        <div className="space-y-2">
-          <label className="text-[11px] font-semibold text-slate-500 ml-1">Email Address</label>
-          <input
-            className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
-            placeholder="you@company.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center px-0.5">
-            <label className="text-[11px] font-semibold text-slate-500">Password</label>
-            <Link to="/forgot-password" className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 transition-colors">Forgot?</Link>
+      {!showOTP ? (
+        <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold text-slate-500 ml-1">Email Address</label>
+            <input
+              className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
+              placeholder="you@company.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
-          <input
-            className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button
-          disabled={loading}
-          className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/15 active:scale-[0.98] text-sm disabled:opacity-50 mt-1"
-        >
-          {loading ? "Signing in..." : "Sign In"}
-        </button>
-      </form>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center px-0.5">
+              <label className="text-[11px] font-semibold text-slate-500">Password</label>
+              <Link to="/forgot-password" className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 transition-colors">Forgot?</Link>
+            </div>
+            <input
+              className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button
+            disabled={loading}
+            className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/15 active:scale-[0.98] text-sm disabled:opacity-50 mt-1"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyOTP} className="space-y-5 relative z-10">
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold text-slate-500 ml-1">6-Digit Verification Code</label>
+            <input
+              className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all text-center tracking-[0.5em] font-bold text-lg"
+              placeholder="000000"
+              maxLength="6"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              required
+            />
+          </div>
+          <button
+            disabled={loading}
+            className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/15 active:scale-[0.98] text-sm disabled:opacity-50"
+          >
+            {loading ? "Verifying..." : "Confirm Login"}
+          </button>
+          <div className="text-center pt-2">
+            <button 
+              type="button"
+              onClick={handleResend}
+              className="text-[11px] font-bold text-slate-400 hover:text-brand-600 uppercase tracking-wider transition-colors"
+            >
+              Didn't get the code? Resend
+            </button>
+          </div>
+        </form>
+      )}
 
       <p className="mt-7 text-center text-sm text-slate-400 font-medium">
         Don't have an account? <Link to="/register" className="text-brand-600 font-semibold hover:text-brand-700 transition-colors">Create one</Link>
@@ -119,6 +180,8 @@ const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOTP, setShowOTP] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -132,8 +195,12 @@ const Register = () => {
     setLoading(true);
     try {
       const { data } = await registerUser(name, email, password);
-      login(data.token, data.role, data);
-      navigate("/dashboard");
+      if (data.requiresOTP) {
+        setShowOTP(true);
+      } else {
+        login(data.token, data.role, data);
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
     } finally {
@@ -141,8 +208,32 @@ const Register = () => {
     }
   };
 
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const { data } = await verifyOTP(email, otp);
+      login(data.token, data.role, data);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid or expired OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      await resendOTP(email);
+      alert("New OTP sent to your email!");
+    } catch (err) {
+      setError("Failed to resend OTP.");
+    }
+  };
+
   return (
-    <AuthLayout title="Create Account" subtitle="Start building with powerful APIs">
+    <AuthLayout title={showOTP ? "Verify Email" : "Create Account"} subtitle={showOTP ? `We've sent a code to ${email}` : "Start building with powerful APIs"}>
       {error && (
         <div className="mb-6 p-3.5 bg-rose-50 text-rose-600 text-xs font-semibold rounded-xl border border-rose-100/80 animate-shake flex items-center gap-2.5">
           <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm-.75 4a.75.75 0 011.5 0v3a.75.75 0 01-1.5 0V5zm.75 6.5a.75.75 0 110-1.5.75.75 0 010 1.5z" /></svg>
@@ -153,46 +244,77 @@ const Register = () => {
         <div className="mb-6 p-3.5 bg-emerald-50 text-emerald-600 text-xs font-semibold rounded-xl border border-emerald-100/80">{success}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
-        <div className="space-y-2">
-          <label className="text-[11px] font-semibold text-slate-500 ml-1">Full Name</label>
-          <input
-            className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
-            placeholder="John Doe"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-[11px] font-semibold text-slate-500 ml-1">Email Address</label>
-          <input
-            className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
-            placeholder="you@company.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-[11px] font-semibold text-slate-500 ml-1">Password</label>
-          <input
-            className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button
-          disabled={loading}
-          className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/15 active:scale-[0.98] text-sm disabled:opacity-50 mt-1"
-        >
-          {loading ? "Creating account..." : "Create Account"}
-        </button>
-      </form>
+      {!showOTP ? (
+        <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold text-slate-500 ml-1">Full Name</label>
+            <input
+              className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
+              placeholder="John Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold text-slate-500 ml-1">Email Address</label>
+            <input
+              className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
+              placeholder="you@company.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold text-slate-500 ml-1">Password</label>
+            <input
+              className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all placeholder:text-slate-300 font-medium text-sm"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button
+            disabled={loading}
+            className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/15 active:scale-[0.98] text-sm disabled:opacity-50 mt-1"
+          >
+            {loading ? "Creating account..." : "Create Account"}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyOTP} className="space-y-5 relative z-10">
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold text-slate-500 ml-1">6-Digit Verification Code</label>
+            <input
+              className="w-full px-4 py-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 focus:bg-white transition-all text-center tracking-[0.5em] font-bold text-lg"
+              placeholder="000000"
+              maxLength="6"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              required
+            />
+          </div>
+          <button
+            disabled={loading}
+            className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/15 active:scale-[0.98] text-sm disabled:opacity-50"
+          >
+            {loading ? "Verifying..." : "Confirm Account"}
+          </button>
+          <div className="text-center pt-2">
+            <button 
+              type="button"
+              onClick={handleResend}
+              className="text-[11px] font-bold text-slate-400 hover:text-brand-600 uppercase tracking-wider transition-colors"
+            >
+              Didn't get the code? Resend
+            </button>
+          </div>
+        </form>
+      )}
 
       <p className="mt-7 text-center text-sm text-slate-400 font-medium">
         Already have an account? <Link to="/" className="text-brand-600 font-semibold hover:text-brand-700 transition-colors">Sign In</Link>

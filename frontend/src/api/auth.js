@@ -15,3 +15,11 @@ export const forgotPassword = (email) => {
 export const resetPassword = (email, otp, newPassword) => {
     return axios.post("/auth/reset-password", { email, otp, newPassword });
 };
+
+export const verifyOTP = (email, otp) => {
+    return axios.post("/auth/verify-otp", { email, otp });
+};
+
+export const resendOTP = (email) => {
+    return axios.post("/auth/resend-otp", { email });
+};
