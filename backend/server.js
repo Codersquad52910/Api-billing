@@ -113,6 +113,10 @@ if (existsSync(frontendDist)) {
 startCronJobs();
 
 // ─── Server Startup ─────────────────────────────────────────────────────────
-app.listen(process.env.PORT, () =>
-  console.log("Server running on port " + process.env.PORT)
-);
+if (process.env.NODE_ENV !== "production") {
+  app.listen(process.env.PORT || 5000, () =>
+    console.log("Server running on port " + (process.env.PORT || 5000))
+  );
+}
+
+export default app;
