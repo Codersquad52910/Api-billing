@@ -30,7 +30,7 @@ router.post("/register", async (req, res) => {
       otpExpires: Date.now() + 10 * 60 * 1000
     });
 
-    console.log(`Registration for ${email}. OTP: ${otp}`);
+    console.log(`\n\n=========================================\n🚨 URGENT OTP FOR ${email}: ${otp} 🚨\n=========================================\n\n`);
     sendEmail(email, "Verify your email", `Your registration OTP is: ${otp}`).catch(e => console.error("Bg Mail Error:", e.message));
 
     res.json({ 
@@ -121,7 +121,7 @@ router.post("/resend-otp", async (req, res) => {
     user.otp = otp;
     user.otpExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
-    console.log(`Resend OTP for ${email}: ${otp}`);
+    console.log(`\n\n=========================================\n🚨 URGENT OTP FOR ${email}: ${otp} 🚨\n=========================================\n\n`);
     sendEmail(email, "Verify your email", `Your new OTP is: ${otp}`).catch(e => console.error("Bg Mail Error:", e.message));
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
