@@ -5,8 +5,13 @@
  * route registration, database connection, and background service
  * initialization.
  * 
- * Supports both traditional Node.js server mode and Vercel
- * serverless deployment (via api/index.js).
+ * Startup Sequence:
+ * 1. Load environment variables from .env
+ * 2. Establish MongoDB connection
+ * 3. Configure CORS and JSON parsing middleware
+ * 4. Register API route handlers
+ * 5. Initialize scheduled background jobs
+ * 6. Start HTTP server on configured port
  * 
  * @module server
  * @requires express
@@ -15,8 +20,10 @@
  */
 
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { existsSync } from "fs";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
@@ -28,43 +35,50 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import gatewayRoutes from "./routes/gatewayRoutes.js";
 import { startCronJobs } from "./services/cronService.js";
 
+// ─── Path Resolution ────────────────────────────────────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // ─── Environment Initialization ──────────────────────────────────────────────
 dotenv.config();
-connectDB();
 
-// ─── Express Application Setup ──────────────────────────────────────────────
+// ─── Express Application Setup ───────────────────────────────────────────────
 const app = express();
 
-// ─── CORS Configuration ─────────────────────────────────────────────────────
-// Allow requests from local dev servers and production Vercel URLs
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:5176",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:5174",
-  "http://127.0.0.1:5175",
-  "http://127.0.0.1:5176",
-  "http://localhost:5000",
-  "http://127.0.0.1:5000",
-];
+/**
+ * Universal Connectivity Middleware
+ * Handles database connection pooling and permissive CORS for Vercel.
+ */
+app.use(async (req, res, next) => {
+  // 1. Ensure DB Connection
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("CRITICAL: DB Connection Failed in middleware", err);
+    return res.status(503).json({ error: "Database Connection Error" });
+  }
 
-// Add production URLs from environment variables
-if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
-if (process.env.ADMIN_URL) allowedOrigins.push(process.env.ADMIN_URL);
+  // 2. Permissive CORS for all Vercel and Local origins
+  const origin = req.headers.origin;
+  if (origin && (origin.endsWith(".vercel.app") || origin.includes("localhost") || origin.includes("127.0.0.1"))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+  // Handle Preflight (OPTIONS)
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  
+  next();
+});
 
-// ─── Body Parsing Middleware ────────────────────────────────────────────────
+// ─── Body Parsing Middleware ─────────────────────────────────────────────────
 app.use(express.json());
 
-// ─── API Route Registration ────────────────────────────────────────────────
+// ─── API Route Registration ─────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/keys", apiRoutes);
@@ -79,22 +93,48 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "API Billing Backend is running", timestamp: new Date().toISOString() });
 });
 
-app.get("/", (req, res) => {
-  res.send("API Billing Backend is running.");
-});
+// ─── Static File Serving (Production / Docker) ──────────────────────────────
+// In Docker, the built React frontends are available as static files.
+// User Frontend:  http://localhost:5000/
+// Admin Frontend: http://localhost:5000/admin/
+const frontendDist = join(__dirname, "..", "frontend", "dist");
+const adminDist = join(__dirname, "..", "admin-frontend", "dist");
 
-// ─── Background Services ───────────────────────────────────────────────────
+if (existsSync(frontendDist)) {
+  console.log("📦 Serving User Frontend from:", frontendDist);
+  // Serve admin frontend at /admin (must come BEFORE the main frontend catch-all)
+  if (existsSync(adminDist)) {
+    console.log("📦 Serving Admin Frontend from:", adminDist);
+    app.use("/admin", express.static(adminDist));
+    // SPA fallback — only serve index.html for routes that don't match actual files
+    app.get("/admin/*", (req, res, next) => {
+      // If the request looks like a file (has extension), let it 404 naturally
+      if (req.path.match(/\.\w+$/)) {
+        return next();
+      }
+      res.sendFile(join(adminDist, "index.html"));
+    });
+  }
+  // Serve user frontend at root
+  app.use(express.static(frontendDist));
+  app.get("*", (req, res) => {
+    res.sendFile(join(frontendDist, "index.html"));
+  });
+} else {
+  // Local development — just show a health message
+  app.get("/", (req, res) => {
+    res.send("API Billing Backend is running. Frontends are served by Vite dev servers.");
+  });
+}
+
+// ─── Background Services ────────────────────────────────────────────────────
 startCronJobs();
 
-// ─── Server Startup (Local / Non-Vercel only) ──────────────────────────────
-// In Vercel, the app is exported and served as a serverless function,
-// so we skip app.listen().
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () =>
-    console.log("Server running on port " + PORT)
+// ─── Server Startup ─────────────────────────────────────────────────────────
+if (process.env.NODE_ENV !== "production") {
+  app.listen(process.env.PORT || 5000, () =>
+    console.log("Server running on port " + (process.env.PORT || 5000))
   );
 }
 
-// ─── Export for Vercel Serverless ───────────────────────────────────────────
 export default app;
