@@ -27,9 +27,22 @@ import mongoose from "mongoose";
  * import connectDB from "./config/db.js";
  * await connectDB();
  */
+let isConnected = false;
+
 const connectDB = async () => {
-  await mongoose.connect(process.env.MONGO_URI);
-  console.log("MongoDB Connected");
+  if (isConnected) {
+    console.log("=> Using existing database connection");
+    return;
+  }
+
+  try {
+    const db = await mongoose.connect(process.env.MONGO_URI);
+    isConnected = db.connections[0].readyState;
+    console.log("MongoDB Connected");
+  } catch (error) {
+    console.error("MongoDB Connection Error:", error);
+    throw error;
+  }
 };
 
 export default connectDB;

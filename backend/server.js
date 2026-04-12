@@ -40,25 +40,53 @@ import { startCronJobs } from "./services/cronService.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ─── Environment & Database Initialization ───────────────────────────────────
+// ─── Environment Initialization ──────────────────────────────────────────────
 dotenv.config();
-connectDB();
 
 // ─── Express Application Setup ───────────────────────────────────────────────
 const app = express();
 
+/**
+ * Database Connection Middleware
+ * Ensures the database is connected before processing any requests on Vercel.
+ */
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(503).json({ error: "Database Connection Error" });
+  }
+});
+
 // ─── CORS Configuration ──────────────────────────────────────────────────────
-// Allow requests from both frontend dev servers (user & admin panels)
-// and from same-origin in production (Docker)
+const allowedOrigins = [
+  "https://api-billing-user.vercel.app",
+  "https://api-billing-admin.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "http://127.0.0.1:5175",
+  "http://127.0.0.1:5176",
+  "http://localhost:5000",
+  "http://127.0.0.1:5000"
+];
+
 app.use(cors({
-  origin: [
-    "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176",
-    "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://127.0.0.1:5176",
-    "http://localhost:5000", "http://127.0.0.1:5000",
-    "https://api-billing-user.vercel.app",
-    "https://api-billing-admin.vercel.app",
-    /\.vercel\.app$/ // This allows ANY of your Vercel subdomains
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in our allowed list OR is a Vercel subdomain
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
