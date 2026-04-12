@@ -20,7 +20,6 @@
  */
 
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -47,50 +46,34 @@ dotenv.config();
 const app = express();
 
 /**
- * Database Connection Middleware
- * Ensures the database is connected before processing any requests on Vercel.
+ * Universal Connectivity Middleware
+ * Handles database connection pooling and permissive CORS for Vercel.
  */
 app.use(async (req, res, next) => {
+  // 1. Ensure DB Connection
   try {
     await connectDB();
-    next();
   } catch (err) {
-    res.status(503).json({ error: "Database Connection Error" });
+    console.error("CRITICAL: DB Connection Failed in middleware", err);
+    return res.status(503).json({ error: "Database Connection Error" });
   }
+
+  // 2. Permissive CORS for all Vercel and Local origins
+  const origin = req.headers.origin;
+  if (origin && (origin.endsWith(".vercel.app") || origin.includes("localhost") || origin.includes("127.0.0.1"))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Handle Preflight (OPTIONS)
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  
+  next();
 });
-
-// ─── CORS Configuration ──────────────────────────────────────────────────────
-const allowedOrigins = [
-  "https://api-billing-user.vercel.app",
-  "https://api-billing-admin.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:5176",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:5174",
-  "http://127.0.0.1:5175",
-  "http://127.0.0.1:5176",
-  "http://localhost:5000",
-  "http://127.0.0.1:5000"
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin is in our allowed list OR is a Vercel subdomain
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".vercel.app")) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
 
 // ─── Body Parsing Middleware ─────────────────────────────────────────────────
 app.use(express.json());
