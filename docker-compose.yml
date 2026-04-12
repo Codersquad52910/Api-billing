@@ -5,8 +5,6 @@
 # Usage: docker compose up --build
 # ============================================================
 
-version: "3.8"
-
 services:
   # ── MongoDB Database ────────────────────────────────────────
   mongodb:
@@ -27,6 +25,9 @@ services:
 
   # ── API Billing Application ─────────────────────────────────
   app:
+    image: 52910/api-billing:latest
+    env_file:
+      - ./backend/.env
     build:
       context: .
       dockerfile: Dockerfile
@@ -40,8 +41,6 @@ services:
       - JWT_SECRET=${JWT_SECRET:-default_jwt_secret_change_me}
       - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@example.com}
       - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-admin123}
-      - SMTP_EMAIL=${SMTP_EMAIL:-}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
     depends_on:
       mongodb:
         condition: service_healthy
